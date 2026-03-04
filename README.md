@@ -1,4 +1,4 @@
-# BOLNA ASSIGNMENT
+# FieldPulse
 
 **AI-powered field sales management platform** that automates rep check-in calls using voice AI, then processes the conversations to extract store-level intelligence, score rep performance, and generate actionable alerts — all without managers having to make a single call.
 
@@ -10,7 +10,7 @@ Built with Next.js 14, Bolna Voice AI, and SQLite.
 
 Field sales managers oversee 20-50+ reps across large territories. Staying informed about store health, competitor activity, and rep performance requires hours of manual calls every day. Most calls follow the same pattern, yet the insights buried in those conversations rarely get captured systematically.
 
-## What This Agent Does
+## What FieldPulse Does
 
 1. **Prioritize** — Smart scheduling engine scores each rep (0-100) based on at-risk stores, days since last call, unresolved follow-ups, and performance trends. Highest-priority reps get called first.
 
@@ -26,7 +26,7 @@ Field sales managers oversee 20-50+ reps across large territories. Staying infor
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                     DASHBOARD                           │
+│                    FIELDPULSE DASHBOARD                  │
 │  Smart Queue  |  Rep Details  |  Alerts  |  Settings    │
 └──────────┬──────────────────────────────────┬───────────┘
            │                                  │
@@ -160,7 +160,7 @@ field-call/
 │   ├── bolna.ts                          # Bolna API client (create, call, patch)
 │   ├── scheduler.ts                      # Smart call queue & priority scoring
 │   └── prompt-builder.ts                 # Dynamic prompt & context generation
-├── bolna-assignment.db                         # SQLite database (auto-created)
+├── fieldpulse.db                         # SQLite database (auto-created)
 └── .env.local                            # Environment variables
 ```
 
@@ -253,7 +253,7 @@ After deploying, go to Settings and click **"Update Webhook URL"** so Bolna send
 
 ### Render
 
-Similar to Railway — supports persistent disk. Add a disk mount in the Render dashboard and point it to the project root so `bolna-assignment.db` persists.
+Similar to Railway — supports persistent disk. Add a disk mount in the Render dashboard and point it to the project root so `fieldpulse.db` persists.
 
 ### Vercel (requires DB migration)
 

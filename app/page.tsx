@@ -205,7 +205,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">BOLNA ASSIGNMENT</h1>
+          <h1 className="text-2xl font-bold mb-4">FieldPulse</h1>
           <p className="text-gray-600 mb-6">No team data found. Seed demo data to get started.</p>
           <button
             onClick={handleSeed}
@@ -233,7 +233,7 @@ export default function Dashboard() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold">BOLNA ASSIGNMENT</h1>
+            <h1 className="text-xl font-bold">FieldPulse</h1>
             <p className="text-sm text-gray-500">{team.name}</p>
           </div>
           <div className="flex gap-3">

@@ -8,7 +8,7 @@ export default function About() {
       {/* Hero */}
       <header className="border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between">
-          <h1 className="text-xl font-bold">BOLNA ASSIGNMENT</h1>
+          <h1 className="text-xl font-bold">FieldPulse</h1>
           <Link
             href="/"
             className="text-sm px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition"
@@ -41,7 +41,7 @@ export default function About() {
             Voice AI that calls reps, extracts data, and flags issues — automatically
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed mb-6">
-            This agent uses <strong>Bolna Voice AI</strong> to make automated end-of-day phone calls
+            FieldPulse uses <strong>Bolna Voice AI</strong> to make automated end-of-day phone calls
             to field reps. A conversational AI agent asks about store visits, reorders,
             competitor activity, and challenges — in natural Hinglish. The call data flows
             into a backend that scores performance, flags at-risk stores, and surfaces
