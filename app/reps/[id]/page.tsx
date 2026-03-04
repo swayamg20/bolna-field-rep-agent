@@ -19,6 +19,12 @@ interface Call {
   rep_engagement_score: number | null; follow_up_needed: string | null;
   called_at: string | null; completed_at: string | null;
 }
+interface NextCallContext {
+  priority_stores: string;
+  follow_up_items: string;
+  competitor_context: string;
+  call_tone: string;
+}
 
 export default function RepDetail() {
   const params = useParams();
@@ -31,28 +37,32 @@ export default function RepDetail() {
   const [expandedCall, setExpandedCall] = useState<string | null>(null);
   const [calling, setCalling] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [nextContext, setNextContext] = useState<NextCallContext | null>(null);
 
   useEffect(() => {
-    fetch(`/api/reps/${id}`)
-      .then(res => res.json())
-      .then(data => {
-        setRep(data.rep);
-        setStores(data.stores);
-        setCalls(data.calls);
-      })
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch(`/api/reps/${id}`).then(r => r.json()),
+      fetch(`/api/reps/${id}/next-context`).then(r => r.ok ? r.json() : null),
+    ]).then(([repData, ctxData]) => {
+      setRep(repData.rep);
+      setStores(repData.stores);
+      setCalls(repData.calls);
+      if (ctxData?.context) setNextContext(ctxData.context);
+    }).finally(() => setLoading(false));
   }, [id]);
 
   // Auto-refresh every 10 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      fetch(`/api/reps/${id}`)
-        .then(res => res.json())
-        .then(data => {
-          setRep(data.rep);
-          setStores(data.stores);
-          setCalls(data.calls);
-        });
+      Promise.all([
+        fetch(`/api/reps/${id}`).then(r => r.json()),
+        fetch(`/api/reps/${id}/next-context`).then(r => r.ok ? r.json() : null),
+      ]).then(([repData, ctxData]) => {
+        setRep(repData.rep);
+        setStores(repData.stores);
+        setCalls(repData.calls);
+        if (ctxData?.context) setNextContext(ctxData.context);
+      });
     }, 10000);
     return () => clearInterval(interval);
   }, [id]);
@@ -168,6 +178,40 @@ export default function RepDetail() {
           </div>
         </section>
 
+        {/* Next Call Context */}
+        {nextContext && (
+          <section>
+            <h2 className="text-lg font-semibold mb-3">Next Call Context (Preview)</h2>
+            <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+              <ContextBlock
+                label="Priority Stores"
+                content={nextContext.priority_stores}
+                defaultText="No stores require special attention today."
+                color="text-red-700"
+                bg="bg-red-50"
+              />
+              <ContextBlock
+                label="Follow-ups"
+                content={nextContext.follow_up_items}
+                defaultText="No specific follow-ups from previous calls."
+                color="text-orange-700"
+                bg="bg-orange-50"
+              />
+              <ContextBlock
+                label="Competitor Intel"
+                content={nextContext.competitor_context}
+                defaultText="No specific competitor activity to follow up on."
+                color="text-purple-700"
+                bg="bg-purple-50"
+              />
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Call Tone</p>
+                <p className="text-sm text-gray-700">{nextContext.call_tone}</p>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Call History */}
         <section>
           <h2 className="text-lg font-semibold mb-3">Call History</h2>
@@ -251,6 +295,36 @@ export default function RepDetail() {
           )}
         </section>
       </main>
+    </div>
+  );
+}
+
+function ContextBlock({ label, content, defaultText, color, bg }: {
+  label: string; content: string; defaultText: string; color: string; bg: string;
+}) {
+  const isDefault = content === defaultText;
+  const lines = content.split('\n').filter(l => l.trim());
+  const header = lines[0];
+  const items = lines.slice(1);
+
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-500 uppercase mb-1">{label}</p>
+      {isDefault ? (
+        <p className="text-sm text-gray-400">{content}</p>
+      ) : (
+        <div className={`rounded-lg ${bg} p-3`}>
+          {items.length > 0 ? (
+            <ul className="space-y-1">
+              {items.map((item, i) => (
+                <li key={i} className={`text-sm ${color}`}>{item.replace(/^- /, '')}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className={`text-sm ${color}`}>{header}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

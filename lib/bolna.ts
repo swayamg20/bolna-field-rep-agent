@@ -24,7 +24,7 @@ export async function createAgent(config: AgentConfig) {
     body: JSON.stringify({
       agent_config: {
         agent_name: config.agentName,
-        agent_welcome_message: config.welcomeMessage || 'Hi! This is Pulse from FieldPulse. Ready for a quick check-in?',
+        agent_welcome_message: config.welcomeMessage || 'Hi! This is Rakesh from BOLNA. Ready for a quick check-in?',
         webhook_url: config.webhookUrl,
         agent_type: 'other',
         tasks: [
@@ -130,6 +130,52 @@ export async function makeCall(agentId: string, phone: string, userData: CallUse
   }
 
   return res.json() as Promise<{ message: string; status: string; execution_id: string }>;
+}
+
+export async function patchAgentPrompt(agentId: string, systemPrompt: string) {
+  const res = await fetch(`${BOLNA_API_BASE}/agent/${agentId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${getApiKey()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      agent_prompts: {
+        task_1: {
+          system_prompt: systemPrompt,
+        },
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Bolna patchAgentPrompt failed (${res.status}): ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function patchAgentWebhook(agentId: string, webhookUrl: string) {
+  const res = await fetch(`${BOLNA_API_BASE}/agent/${agentId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${getApiKey()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      agent_config: {
+        webhook_url: webhookUrl,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Bolna patchAgentWebhook failed (${res.status}): ${text}`);
+  }
+
+  return res.json();
 }
 
 export async function getExecution(agentId: string, executionId: string) {

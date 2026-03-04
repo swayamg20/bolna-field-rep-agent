@@ -8,7 +8,7 @@ import { v4 as uuid } from 'uuid';
 interface Team { id: string; name: string; bolna_agent_id: string }
 
 export async function POST(req: Request) {
-  const { team_id } = await req.json();
+  const { team_id, max_concurrent = 3 } = await req.json();
 
   if (!team_id) {
     return NextResponse.json({ error: 'team_id is required' }, { status: 400 });
@@ -20,11 +20,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Team not found or no Bolna agent configured' }, { status: 400 });
   }
 
-  // Use scheduler to call reps in priority order
   const queue = buildCallQueue(team_id);
-  let triggered = 0;
+  const toCall = queue.slice(0, max_concurrent);
+  const remaining = queue.slice(max_concurrent);
 
-  for (const item of queue) {
+  const triggered: Array<{
+    rep_id: string;
+    rep_name: string;
+    call_id: string;
+    execution_id: string;
+    priority_score: number;
+    priority_reasons: string[];
+  }> = [];
+
+  for (const item of toCall) {
     try {
       const context = buildCallContext(item.rep_id, team_id);
       const userData = buildUserData(context);
@@ -40,11 +49,27 @@ export async function POST(req: Request) {
         "INSERT INTO calls (id, rep_id, team_id, bolna_execution_id, status, called_at) VALUES (?, ?, ?, ?, 'calling', datetime('now'))"
       ).run(callId, item.rep_id, team_id, response.execution_id);
 
-      triggered++;
+      triggered.push({
+        rep_id: item.rep_id,
+        rep_name: item.rep_name,
+        call_id: callId,
+        execution_id: response.execution_id,
+        priority_score: item.priority_score,
+        priority_reasons: item.priority_reasons,
+      });
     } catch (err) {
-      console.error(`Failed to trigger call for ${item.rep_name}:`, err);
+      console.error(`Failed to trigger smart call for ${item.rep_name}:`, err);
     }
   }
 
-  return NextResponse.json({ triggered });
+  return NextResponse.json({
+    triggered,
+    queued: remaining.map(item => ({
+      rep_id: item.rep_id,
+      rep_name: item.rep_name,
+      priority_score: item.priority_score,
+      priority_reasons: item.priority_reasons,
+    })),
+    total: queue.length,
+  });
 }

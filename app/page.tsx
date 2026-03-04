@@ -28,6 +28,14 @@ interface OutcomeMetrics {
   active_alerts: number;
   alerts_by_type: Record<string, number>;
 }
+interface CallQueueItem {
+  rep_id: string;
+  rep_name: string;
+  phone: string;
+  priority_score: number;
+  priority_reasons: string[];
+  suggested_time: string | null;
+}
 interface LogEntry {
   id: string; rep_name: string; category: string; action: string; detail: string; created_at: string;
 }
@@ -53,6 +61,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [callingRep, setCallingRep] = useState<string | null>(null);
   const [callingAll, setCallingAll] = useState(false);
+  const [callQueue, setCallQueue] = useState<CallQueueItem[]>([]);
+  const [smartCalling, setSmartCalling] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -62,10 +72,17 @@ export default function Dashboard() {
 
   const fetchDashboard = useCallback(async (tid: string) => {
     try {
-      const res = await fetch(`/api/dashboard/${tid}`);
-      if (res.ok) {
-        const d = await res.json();
+      const [dashRes, queueRes] = await Promise.all([
+        fetch(`/api/dashboard/${tid}`),
+        fetch(`/api/calls/queue?team_id=${tid}`),
+      ]);
+      if (dashRes.ok) {
+        const d = await dashRes.json();
         setData(d);
+      }
+      if (queueRes.ok) {
+        const q = await queueRes.json();
+        setCallQueue(q.queue || []);
       }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
@@ -148,6 +165,29 @@ export default function Dashboard() {
     }
   };
 
+  const handleSmartCalls = async () => {
+    if (!teamId) return;
+    setSmartCalling(true);
+    try {
+      const res = await fetch('/api/calls/smart-trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team_id: teamId, max_concurrent: 3 }),
+      });
+      if (res.ok) {
+        const { triggered } = await res.json();
+        showToast(`${triggered.length} smart calls triggered`);
+        fetchDashboard(teamId);
+      } else {
+        showToast('Failed to trigger smart calls');
+      }
+    } catch {
+      showToast('Failed to trigger smart calls');
+    } finally {
+      setSmartCalling(false);
+    }
+  };
+
   const handleResolveAlert = async (alertId: string) => {
     await fetch(`/api/alerts/${alertId}/resolve`, { method: 'PATCH' });
     if (teamId) fetchDashboard(teamId);
@@ -165,7 +205,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">FieldPulse</h1>
+          <h1 className="text-2xl font-bold mb-4">BOLNA ASSIGNMENT</h1>
           <p className="text-gray-600 mb-6">No team data found. Seed demo data to get started.</p>
           <button
             onClick={handleSeed}
@@ -193,7 +233,7 @@ export default function Dashboard() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold">FieldPulse</h1>
+            <h1 className="text-xl font-bold">BOLNA ASSIGNMENT</h1>
             <p className="text-sm text-gray-500">{team.name}</p>
           </div>
           <div className="flex gap-3">
@@ -218,7 +258,7 @@ export default function Dashboard() {
             <button
               onClick={handleCallAll}
               disabled={callingAll}
-              className="text-sm px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 transition"
+              className="text-sm px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition"
             >
               {callingAll ? 'Calling...' : 'Call All Reps'}
             </button>
@@ -312,6 +352,78 @@ export default function Dashboard() {
                   </button>
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* Smart Call Queue */}
+        {callQueue.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-lg font-semibold">Smart Call Queue</h2>
+                <p className="text-xs text-gray-500">Prioritized by store health, rep activity, and follow-up needs</p>
+              </div>
+              <button
+                onClick={handleSmartCalls}
+                disabled={smartCalling}
+                className="text-sm px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 transition"
+              >
+                {smartCalling ? 'Starting...' : 'Start Smart Calls'}
+              </button>
+            </div>
+            <div className="space-y-2">
+              {callQueue.map((item, idx) => {
+                const urgency =
+                  item.priority_score >= 60
+                    ? 'border-red-200 bg-red-50'
+                    : item.priority_score >= 30
+                    ? 'border-orange-200 bg-orange-50'
+                    : 'border-gray-200 bg-white';
+                const dot =
+                  item.priority_score >= 60
+                    ? 'bg-red-500'
+                    : item.priority_score >= 30
+                    ? 'bg-orange-500'
+                    : 'bg-green-500';
+                return (
+                  <div key={item.rep_id} className={`rounded-lg border p-4 ${urgency}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-mono text-gray-400 w-6">{idx + 1}.</span>
+                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dot}`} />
+                        <div>
+                          <Link href={`/reps/${item.rep_id}`} className="text-sm font-medium text-blue-600 hover:underline">
+                            {item.rep_name}
+                          </Link>
+                          {item.suggested_time && (
+                            <span className="ml-2 text-xs text-gray-400">Best time: {item.suggested_time}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold">{item.priority_score}<span className="text-xs text-gray-400 font-normal">/100</span></span>
+                        <button
+                          onClick={() => handleCallRep(item.rep_id)}
+                          disabled={callingRep === item.rep_id}
+                          className="text-xs px-3 py-1.5 bg-gray-900 text-white rounded hover:bg-gray-800 disabled:opacity-50 transition"
+                        >
+                          {callingRep === item.rep_id ? 'Calling...' : 'Call'}
+                        </button>
+                      </div>
+                    </div>
+                    {item.priority_reasons.length > 0 && (
+                      <div className="ml-12 mt-1.5 flex flex-wrap gap-1.5">
+                        {item.priority_reasons.map((reason, i) => (
+                          <span key={i} className="text-xs text-gray-600 bg-white/70 px-2 py-0.5 rounded">
+                            {reason}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}

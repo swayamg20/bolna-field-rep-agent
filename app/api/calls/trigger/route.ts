@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { makeCall } from '@/lib/bolna';
+import { makeCall, CallUserData } from '@/lib/bolna';
+import { buildCallContext, buildUserData } from '@/lib/prompt-builder';
 import { v4 as uuid } from 'uuid';
 
 interface Rep { id: string; team_id: string; name: string; phone: string; territory: string }
 interface Team { id: string; name: string; bolna_agent_id: string }
-interface Store { id: string; name: string }
-interface Call { call_summary: string | null }
 
 export async function POST(req: Request) {
   const { rep_id } = await req.json();
@@ -26,19 +25,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Team not found or no Bolna agent configured' }, { status: 400 });
   }
 
-  const stores = db.prepare('SELECT * FROM stores WHERE rep_id = ?').all(rep_id) as Store[];
-  const lastCall = db.prepare(
-    "SELECT call_summary FROM calls WHERE rep_id = ? AND status = 'completed' ORDER BY called_at DESC LIMIT 1"
-  ).get(rep_id) as Call | undefined;
+  const context = buildCallContext(rep.id, team.id);
+  const userData = buildUserData(context);
 
   try {
-    const response = await makeCall(team.bolna_agent_id, rep.phone, {
-      rep_name: rep.name,
-      company_name: team.name,
-      territory_name: rep.territory,
-      store_list: stores.map(s => s.name).join(', '),
-      last_call_context: lastCall?.call_summary || 'This is the first check-in call',
-    });
+    const response = await makeCall(
+      team.bolna_agent_id,
+      rep.phone,
+      userData as unknown as CallUserData
+    );
 
     const callId = uuid();
     db.prepare(

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { patchAgentPrompt } from '@/lib/bolna';
+import { getAgentPromptTemplate } from '@/lib/prompt-builder';
 import { v4 as uuid } from 'uuid';
 
 export async function POST() {
@@ -78,6 +80,17 @@ export async function POST() {
     'Rep Amit Verma has not secured reorder. Potential lost account.',
     reps[2].id, vermaStore.id
   );
+
+  // Patch the Bolna agent with the dynamic prompt template
+  const agentId = process.env.BOLNA_AGENT_ID;
+  if (agentId) {
+    try {
+      await patchAgentPrompt(agentId, getAgentPromptTemplate());
+      console.log('Agent prompt template set successfully');
+    } catch (err) {
+      console.error('Failed to set agent prompt template (non-fatal):', err);
+    }
+  }
 
   return NextResponse.json({ success: true, team_id: teamId });
 }

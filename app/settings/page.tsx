@@ -6,6 +6,8 @@ import Link from 'next/link';
 export default function Settings() {
   const [toast, setToast] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [settingPrompt, setSettingPrompt] = useState(false);
+  const [updatingWebhook, setUpdatingWebhook] = useState(false);
 
   // Add rep form
   const [repForm, setRepForm] = useState({ name: '', phone: '', territory: '', team_id: '' });
@@ -119,6 +121,91 @@ export default function Settings() {
             className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50 transition"
           >
             {seeding ? 'Seeding...' : 'Seed Demo Data'}
+          </button>
+        </section>
+
+        {/* Agent Prompt Setup */}
+        <section className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold mb-2">Agent Prompt Template</h2>
+          <p className="text-sm text-gray-500 mb-2">
+            Patches the Bolna agent with the dynamic prompt template containing {'{variable}'} placeholders.
+            Bolna substitutes these from <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">user_data</code> on each call, so every call gets a unique context-aware conversation.
+          </p>
+          <p className="text-xs text-gray-400 mb-4">
+            Run this once after creating a new agent, or after seeding demo data. The seed endpoint does this automatically.
+          </p>
+          <button
+            onClick={async () => {
+              setSettingPrompt(true);
+              try {
+                const teamsRes = await fetch('/api/teams');
+                const { teams } = await teamsRes.json();
+                if (!teams || teams.length === 0) {
+                  showToast('No team found. Seed data first.');
+                  return;
+                }
+                const res = await fetch('/api/agent/setup-prompt', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ team_id: teams[0].id }),
+                });
+                if (res.ok) {
+                  showToast('Agent prompt template set successfully');
+                } else {
+                  const err = await res.json();
+                  showToast(`Error: ${err.error}`);
+                }
+              } finally {
+                setSettingPrompt(false);
+              }
+            }}
+            disabled={settingPrompt}
+            className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50 transition"
+          >
+            {settingPrompt ? 'Setting...' : 'Set Agent Prompt Template'}
+          </button>
+        </section>
+
+        {/* Update Webhook URL */}
+        <section className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold mb-2">Webhook URL</h2>
+          <p className="text-sm text-gray-500 mb-2">
+            Updates the Bolna agent&apos;s webhook URL to point to your current <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">NEXT_PUBLIC_APP_URL</code>.
+            Required when switching between local (ngrok) and deployed environments.
+          </p>
+          <p className="text-xs text-gray-400 mb-4">
+            If using localhost, Bolna cannot reach your webhook. Use a tunnel like ngrok and update the env var first.
+          </p>
+          <button
+            onClick={async () => {
+              setUpdatingWebhook(true);
+              try {
+                const teamsRes = await fetch('/api/teams');
+                const { teams } = await teamsRes.json();
+                if (!teams || teams.length === 0) {
+                  showToast('No team found. Seed data first.');
+                  return;
+                }
+                const res = await fetch('/api/agent/update-webhook', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ team_id: teams[0].id }),
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  showToast(`Webhook updated: ${data.webhook_url}`);
+                } else {
+                  const err = await res.json();
+                  showToast(`Error: ${err.error}`);
+                }
+              } finally {
+                setUpdatingWebhook(false);
+              }
+            }}
+            disabled={updatingWebhook}
+            className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50 transition"
+          >
+            {updatingWebhook ? 'Updating...' : 'Update Webhook URL'}
           </button>
         </section>
 

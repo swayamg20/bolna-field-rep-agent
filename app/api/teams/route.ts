@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { createAgent } from '@/lib/bolna';
+import { getAgentPromptTemplate } from '@/lib/prompt-builder';
 import { v4 as uuid } from 'uuid';
 
 export async function POST(req: Request) {
@@ -18,6 +19,7 @@ export async function POST(req: Request) {
       const result = await createAgent({
         agentName: `FieldPulse - ${name}`,
         webhookUrl: `${appUrl}/api/webhook/bolna`,
+        systemPrompt: getAgentPromptTemplate(),
       });
       agentId = result.agent_id;
     } catch (err) {

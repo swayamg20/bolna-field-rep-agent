@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'FieldPulse — Field Sales Intelligence',
+  title: 'BOLNA ASSIGNMENT — Field Sales Intelligence',
   description: 'Automated field sales rep check-ins powered by voice AI',
 };
 

@@ -6,7 +6,7 @@ let db: Database.Database | null = null;
 export function getDb(): Database.Database {
   if (db) return db;
 
-  const dbPath = path.join(process.cwd(), 'fieldpulse.db');
+  const dbPath = path.join(process.cwd(), 'bolna-assignment.db');
   db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
